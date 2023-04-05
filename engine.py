@@ -14,6 +14,7 @@ class Value:
         return f"Value(data={self.data}, grad={self.grad})"
     
     def __add__(self, other):
+        other = other if isinstance(other, Value) else Value(other)
         o = Value(self.data + other.data, (self, other), '+')
 
         def _backward():
@@ -24,6 +25,7 @@ class Value:
         return o
     
     def __mul__(self, other):
+        other = other if isinstance(other, Value) else Value(other)
         o = Value(self.data * other.data, (self, other), '*')
         def _backward():
             self.grad += other.data * o.grad
@@ -31,6 +33,14 @@ class Value:
             
         self._backward = _backward
         return o
+    
+    def __pow__(self, other):
+        assert isinstance(other, (int, float))
+        o = Value(self.data ** other, (self,), f'**{other}')
+        def _backward():
+            self.grad += other * self.data ** (other - 1) * o.grad
+        
+        self._backward = _backward
     
     def backward(self):
 
@@ -43,6 +53,7 @@ class Value:
                     topo.append(child)
                     dfs(child)
         dfs(self)
+        self.grad = 0.0
         for node in topo:
             node._backward()
 
@@ -56,10 +67,6 @@ class Value:
 
         self._backward = _backward
         return o
-
-
-
-                
 
 if __name__ == "__main__":
     # a = Value(1.0)
